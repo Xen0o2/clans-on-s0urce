@@ -560,8 +560,12 @@ const images = {
     (async () => {
         while (document.querySelector("#login-top"))
             await sleep(1000);
-		if (!player.username || player.username == "Anon")
-			return prettierLoadFails(`You must have an account to use "clans-on-s0urce" addon!`)
+		if (!player.username) {
+            await sleep(300);
+			player.username = document.querySelector("img[src='icons/online.svg']")?.parentNode?.innerText?.trim();
+			if (!player.username)
+				return prettierLoadFails(`You must have an account to use "clans-on-s0urce" addon!`)
+		}
 		createOrUpdateUser()
 		createDesktopIcon()
     })()    
