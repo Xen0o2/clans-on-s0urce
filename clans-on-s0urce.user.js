@@ -53,8 +53,8 @@ class Component {
 }
 
 const api = axios.create({
-	baseURL: `http://localhost:3000`
-	// baseURL: `https://api-clans.duckdns.org`
+	// baseURL: `http://localhost:3000`
+	baseURL: `https://api-clans.duckdns.org`
 })
 
 const player = {
@@ -475,7 +475,7 @@ const images = {
 							}),
 							!user.image && new Component("div", {
 								innerText: user.name.slice(0, 1).toUpperCase(),
-								style: { height: "100%", width: "50px", backgroundColor: "var(--color-blue)", borderRadius: "4px", display: "flex", justifyContent: "center", alignItems: "center", fontSize: "1.5rem", fontWeight: "500" }
+								style: { height: "100%", width: "80px", backgroundColor: "var(--color-blue)", borderRadius: "4px", display: "flex", justifyContent: "center", alignItems: "center", fontSize: "1.5rem", fontWeight: "500" }
 							}),
 							new Component("div", {
 								style: { display: "flex", flexDirection: "column" },
@@ -486,7 +486,7 @@ const images = {
 									}),
 									new Component("span", {
 										innerText: user.name,
-										style: { color: "white", fontSize: "1.6rem", fontWeight: "500" }
+										style: { color: "white", fontSize: "1.6rem", fontWeight: "500", textAlign: "start" }
 									}),
 									new Component("div", {
 										style: { display: "flex", alignItems: "center", gap: "5px" },
