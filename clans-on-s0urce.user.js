@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         clans-on-s0urce
 // @namespace    http://tampermonkey.net/
-// @version      2024-04-02
+// @version      2024-04-13
 // @description  Create or join a clan on s0urce.io!
 // @author       Xen0o2
 // @match        https://s0urce.io/
@@ -420,7 +420,7 @@ const images = {
 							children: [
 								user.image && new Component("img", {
 									src: user.image,
-									style: { height: "100%", borderRadius: "4px" }
+									style: { height: "100%", borderRadius: "4px", width: "50px", objectFit: "cover" }
 								}),
 								!user.image && new Component("div", {
 									innerText: user.name.slice(0, 1).toUpperCase(),
@@ -480,7 +480,7 @@ const images = {
 								children: [
 									user.image && new Component("img", {
 										src: user.image,
-										style: { height: "100%", borderRadius: "4px" }
+										style: { height: "100%", borderRadius: "4px", width: "80px", objectFit: "cover" }
 									}),
 									!user.image && new Component("div", {
 										innerText: user.name.slice(0, 1).toUpperCase(),
@@ -690,7 +690,7 @@ const images = {
 									children: [
 										user.image && new Component("img", {
 											src: user.image,
-											style: { height: "100%", borderRadius: "4px" }
+											style: { height: "100%", borderRadius: "4px", width: "50px", objectFit: "cover" }
 										}),
 										!user.image && new Component("div", {
 											innerText: user.name.slice(0, 1).toUpperCase(),
@@ -909,7 +909,7 @@ const images = {
 				const hacked = newWindow.addedNodes[0].querySelector(".wrapper > .username")?.innerText;
 				const response = await api.post(`/user/${player.username}/hack/${hacked}`, { body: document.body.innerText })
 				if (response.data)
-					player.clan = response.data.clan;
+					player.clan = response.data.clan, console.log(response.data);
 			} catch(e) {
 				console.log(e);
 			}
