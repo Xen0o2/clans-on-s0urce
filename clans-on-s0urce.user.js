@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         clans-on-s0urce
 // @namespace    http://tampermonkey.net/
-// @version      2024-04-13
+// @version      2024-04-13 - 2
 // @description  Create or join a clan on s0urce.io!
 // @author       Xen0o2
 // @match        https://s0urce.io/
@@ -254,7 +254,7 @@ const images = {
 								children: [
 									clan.image && new Component("img", {
 										src: clan.image,
-										style: { height: "100%", borderRadius: "4px" }
+										style: { height: "100%", borderRadius: "4px", width: "50px", objectFit: "cover" }
 									}),
 									!clan.image && new Component("div", {
 										innerText: clan.name.slice(0, 1).toUpperCase(),
@@ -627,7 +627,7 @@ const images = {
 								children: [
 									clan.image && new Component("img", {
 										src: clan.image,
-										style: { height: "100%", borderRadius: "4px" }
+										style: { height: "100%", borderRadius: "4px", width: "50px", objectFit: "cover" }
 									}),
 									!clan.image && new Component("div", {
 										innerText: clan.name.slice(0, 1).toUpperCase(),
