@@ -79,28 +79,23 @@ const images = {
 		function dragMouseDown(e) {
 			e = e || window.event;
 			e.preventDefault();
-			// get the mouse cursor position at startup:
 			pos3 = e.clientX;
 			pos4 = e.clientY;
 			document.onmouseup = closeDragElement;
-			// call a function whenever the cursor moves:
 			document.onmousemove = elementDrag;
 		}
 		function elementDrag(e){
 			e = e || window.event;
 			e.preventDefault();
-			// calculate the new cursor position:
 			pos1 = pos3 - e.clientX;
 			pos2 = pos4 - e.clientY;
 			pos3 = e.clientX;
 			pos4 = e.clientY;
-			// set the element's new position:
 			element.style.top = (element.offsetTop - pos2) + "px";
 			element.style.left = (element.offsetLeft - pos1) + "px";
 		}
 		
 		function closeDragElement(){
-			// stop moving when mouse button is released:
 			document.onmouseup = null;
 			document.onmousemove = null;
 		}
@@ -171,7 +166,7 @@ const images = {
 		const window = new Component("div", {
 			id: "clan-window",
 			classList: ["window", "svelte-1hjm43z", "window-selected"],
-			style: { zIndex: "56",top: "300px", left: "300px", resize: "both" },
+			style: { zIndex: "56", top: "300px", left: "300px", resize: "both", overflow: "auto", minHeight: "500px", minWidth: "450px" },
 			children: [
 				new Component("div", {
 					id: "to-drag",
@@ -198,7 +193,7 @@ const images = {
 				}),
 				new Component("div", {
 					classList: ["window-content", "svelte-1hjm43z"],
-					style: { minWidth: "300px", minHeight: "400px", width: "calc(450px)", height: "calc(240px)", padding: "10px" },
+					style: { minWidth: "300px", minHeight: "300px", width: "100%", height: "90%", padding: "10px" },
 					children: [
 						new Component("div", {
 							id: "content",
@@ -444,7 +439,7 @@ const images = {
 										}),
 										new Component("span", {
 											innerText: user.level,
-											style: { fontSize: "0.8rem", color: "var(--color-lightgrey)" }
+											style: { fontSize: "1rem", color: "var(--color-lightgrey)" }
 										})
 									]
 								})
@@ -863,11 +858,37 @@ const images = {
 		}
 	}
 
-	// const xpObserver = new MutationObserver(function(mutations) {
-    //     if (mutations.length == 1 && mutations[0].type == "characterData") {
-	// 		console.log(mutations[0].target.data);
-	// 	}
-    // })
+	const logObserver = new MutationObserver(function(mutations) {
+        const messages = mutations.filter(e => 
+            e.target.id == "wrapper"
+            && (!e.nextSibling || !e.nextSibling[0])
+            && e.addedNodes
+            && e.addedNodes[0]?.classList?.contains("message"))
+        if (!messages.length)
+            return;
+        messages.forEach(async messageElement => {
+			const message = messageElement.addedNodes[0];
+            if (message.innerText.includes("being hacked") || message.innerText.includes("been hacked")) {
+				const hacker = message.querySelectorAll(".tag")[0]?.innerText || message.innerText.match(/by .+ on/)[0].slice(3, -3);
+				const progression = parseInt((message.innerText.match(/\d{1,3}(\.\d{1,2})?%/) || ["100%"])[0].slice(0, -1));
+				if (progression == 100) {
+					document.querySelector("#desktop-container > div:nth-child(3)")?.click();
+					await sleep(200);
+					const users = document.querySelectorAll(".username");
+					const level = (Array.from(users).find(e => e.innerText.trim() == hacker).parentNode?.innerText?.match(/\d+/) || [])[0];
+					if (users.length == 0 || !level)
+						return;
+					try {
+						const response = await api.post(`/user/${player.username}/hacked/${hacker}`, { level })
+						if (response.data)
+							player.clan = response.data;
+					} catch(e) {
+						console.log(e);
+					}
+				}
+			}
+        })
+    });
 
 	const windowOpenObserver = new MutationObserver(async function(mutations) {
         const newWindow = mutations.find(e => {
@@ -877,31 +898,43 @@ const images = {
         })
         if (!newWindow)
             return;
+
+		const isLogWindow = newWindow.addedNodes[0].querySelector(".window-title > img[src='icons/log.svg']")
+        if (isLogWindow)
+            logObserver.observe(isLogWindow?.closest(".window.svelte-1hjm43z")?.querySelector(".window-content > #wrapper"), {attributes: false, childList: true, characterData: false, subtree: true});
 		
 		const hasHackedSomeoneWindow = newWindow.addedNodes[0].querySelectorAll(".window-content > div > .el").length == 4;
 		if (hasHackedSomeoneWindow) {
-			// const xp = (document.querySelector("div.topbar-value:nth-child(4) > div:nth-child(1) > div:nth-child(4)")?.innerText.match(/\d+/) || [])[0]
-			// const xpPoints = xp && !(xp % 1000);
-			const hacked = newWindow.addedNodes[0].querySelector(".wrapper > .username")?.innerText;
-			// const level = newWindow.addedNodes[0].querySelector(".wrapper > div")?.innerText;
-
 			try {
+				const hacked = newWindow.addedNodes[0].querySelector(".wrapper > .username")?.innerText;
 				const response = await api.post(`/user/${player.username}/hack/${hacked}`, { body: document.body.innerText })
-				if (response.data) {
+				if (response.data)
 					player.clan = response.data.clan;
-					console.log(response.data);
-				}
 			} catch(e) {
 				console.log(e);
-				// prettierLoadFails(`An error happened while adding points from hacking someone`);
 			}
 		}
 	})
 
-	const createObservers = () => {
-		// xpObserver.observe(document.querySelector("div.topbar-value:nth-child(4) > div:nth-child(1) > div:nth-child(4)"), { subtree: true, characterData: true, childList: true });
-		windowOpenObserver.observe(document, {attributes: false, childList: true, characterData: false, subtree: true});
+	const windowCloseObserver = new MutationObserver(async function(mutations) {
+        const windowClosed = mutations.find(e => {
+            return e.target == document.querySelector("main") &&
+                e.removedNodes.length == 1 &&
+                e.removedNodes[0]?.classList?.contains("window", "svelte-1hjm43z")
+        })
+        if (!windowClosed)
+            return;
 
+        const isLogWindow = windowClosed.removedNodes[0].querySelector(".window-title > img[src='icons/log.svg']")
+        if (isLogWindow)
+            logObserver.disconnect();
+	})
+
+	const createObservers = () => {
+		const logWindow = document.querySelector(".window-title > img[src='icons/log.svg']").closest(".window.svelte-1hjm43z").querySelector(".window-content > #wrapper");
+		logObserver.observe(logWindow, {attributes: false, childList: true, characterData: false, subtree: true});
+		windowOpenObserver.observe(document, {attributes: false, childList: true, characterData: false, subtree: true});
+		windowCloseObserver.observe(document, {attributes: false, childList: true, characterData: false, subtree: true});
 	};
     
     (async () => {
