@@ -57,17 +57,19 @@ const api = axios.create({
 	baseURL: `https://api-clans.duckdns.org`
 })
 
-const player = {
-	username: document.querySelector("img[src='icons/online.svg']")?.parentNode?.innerText?.trim(),
-	clan: null
-};
 
 const images = {
 	icon: "https://www.svgrepo.com/show/346430/sword-fill.svg"
 };
 
 (function() {
-    'use strict';
+	'use strict';
+	
+	const player = {
+		username: document.querySelector("img[src='icons/online.svg']")?.parentNode?.innerText?.trim(),
+		clan: null,
+		user: null
+	};
 
 	const dragElement = (element) => {
 		let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
@@ -237,19 +239,23 @@ const images = {
 
 		try {
 			const response = await api.get(`clan/requestable/${player.username}`);
-			console.log(response.data);
 	
 			const clanList = new Component("div", {
 				classList: ["content-delete"],
-				style: { display: "flex", flexDirection: "column", height: "100%", width: "100%", fontFamily: "var(--font-family-1)", fontWeight: "500" },
-				children: response.data.map(clan => {
+				style: { display: "flex", flexDirection: "column", height: "100%", width: "100%", fontFamily: "var(--font-family-1)", fontWeight: "500", gap: "3px" },
+				children: response.data.length == 0 ?
+				[new Component("span", {
+					innerText: "No clan to request"
+				})] :
+				response.data.map(clan => {
 					return new Component("div", {
-						style: { width: "100%", height: "50px", display: "flex", justifyContent: "space-between", alignItems: "center", borderRadius: "4px", cursor: "pointer", border: "1px solid transparent" },
-						onmouseenter: (event) => {event.target.style.backgroundColor = "var(--color-grey)"; event.target.style.border = "1px solid white"; },
-						onmouseleave: (event) => {event.target.style.backgroundColor = null; event.target.style.border = null;},
+						style: { width: "100%", height: "50px", display: "flex", justifyContent: "space-between", alignItems: "center",  borderRadius: "4px", cursor: "pointer", backgroundColor: "var(--color-darkgrey)" },
+						onmouseenter: (event) => {event.target.style.backgroundColor = "var(--color-grey)"; event.target.style.outline = "1px solid white"; },
+						onmouseleave: (event) => {event.target.style.backgroundColor = "var(--color-darkgrey)"; event.target.style.outline = null;},
+						onclick: () => createClanInterfaceUsers(clan),
 						children: [
 							new Component("div", {
-								style: { display: "flex", gap: "20px", height: "100%", alignItems: "center" },
+								style: { display: "flex", gap: "10px", height: "100%", alignItems: "center" },
 								children: [
 									clan.image && new Component("img", {
 										src: clan.image,
@@ -257,7 +263,7 @@ const images = {
 									}),
 									!clan.image && new Component("div", {
 										innerText: clan.name.slice(0, 1).toUpperCase(),
-										style: { height: "100%", width: "50px", backgroundColor: "var(--color-darkgrey)", borderRadius: "4px", display: "flex", justifyContent: "center", alignItems: "center", fontSize: "1.5rem", fontWeight: "500" }
+										style: { height: "100%", width: "50px", backgroundColor: "var(--color-blue)", borderRadius: "4px", display: "flex", justifyContent: "center", alignItems: "center", fontSize: "1.5rem", fontWeight: "500" }
 									}),
 									new Component("div", {
 										style: { fontWeight: "500" },
@@ -271,13 +277,15 @@ const images = {
 							}),
 							new Component("button", {
 								innerText: "Send request",
-								style: { width: "120px", height: "70%" },
+								style: { width: "120px", height: "70%", marginRight: "20px" },
 								classList: ["green", "svelte-ec9kqa"],
-								onclick: async (event) => {
+								onclick: async (e) => {
+									e.stopPropagation();
 									try {
-										event.target.innerText = "Sent";
-										event.target.classList.add("cantClick");
+										e.target.innerText = "Sent";
+										e.target.classList.add("cantClick");
 										await api.post(`/clan/${clan.id}/request/${player.username}`);
+										e.target.onclick = null;
 									} catch(e) {
 										console.log(e);
 										prettierLoadFails("An error happen while sending request, please contact Xen0o2 on Discord!");
@@ -375,7 +383,8 @@ const images = {
 				}) : null,
 				new Component("button", {
 					classList: ["grey", "svelte-ec9kqa", "clan-button", "clan-settings"],
-					style: { display: "flex", justifyContent: "center", alignItems: "center", width: "100px" },
+					style: { display: "flex", justifyContent: "center", alignItems: "center", width: "40px", minWidth: "40px" },
+					onclick: createClanInterfaceSettings,
 					children: [
 						new Component("img", {
 							src: "icons/settings.svg",
@@ -395,13 +404,14 @@ const images = {
 			e.classList.remove("green");
 			e.classList.add("grey")
 		})
-		document.querySelector(".clan-users").classList.remove("grey");
-		document.querySelector(".clan-users").classList.add("green");
-		document.getElementById("clan-name-button").innerText = clan.name;
+		document.querySelector(".clan-users")?.classList.remove("grey");
+		document.querySelector(".clan-users")?.classList.add("green");
+		if (document.getElementById("clan-name-button"))
+			document.getElementById("clan-name-button").innerText = clan.name;
 		const usersComponent = new Component("div", {
 			classList: ["content-delete"],
 			style: { height: "100%", width: "100%", display: "flex", flexDirection: "column", alignItems: "center", gap: "3px" }, 
-			children: clan.users
+			children: Array.from(new Set(clan.users))
 			.sort((a,b) => b.level - a.level)
 			.map(user => {
 				return new Component("div", {
@@ -419,7 +429,7 @@ const images = {
 								}),
 								!user.image && new Component("div", {
 									innerText: user.name.slice(0, 1).toUpperCase(),
-									style: { height: "100%", width: "50px", backgroundColor: "var(--color-grey)", borderRadius: "4px", display: "flex", justifyContent: "center", alignItems: "center", fontSize: "1.5rem", fontWeight: "500" }
+									style: { height: "100%", width: "50px", backgroundColor: "var(--color-blue)", borderRadius: "4px", display: "flex", justifyContent: "center", alignItems: "center", fontSize: "1.5rem", fontWeight: "500" }
 								}),
 								new Component("span", {
 									innerText: user.name,
@@ -442,7 +452,7 @@ const images = {
 						}),
 						new Component("div", {
 							innerText: user.points.toString(),
-							style: { color: "var(--color-lightgrey)", marginRight: "20px" }
+							style: { fontFamily: "var(--font-family-2)", color: "var(--color-lightgrey)", marginRight: "20px" }
 						})
 					]
 				})
@@ -458,7 +468,8 @@ const images = {
 			e.classList.remove("green");
 			e.classList.add("grey")
 		})
-		document.getElementById("clan-name-button").innerText = player.clan.name;
+		if (document.getElementById("clan-name-button") && player.clan)
+			document.getElementById("clan-name-button").innerText = player.clan.name;
 		try {
 			const response = await api.get(`/user/getByUsername/${username}`);
 			const user = response.data;
@@ -467,41 +478,64 @@ const images = {
 				style: { height: "100%", width: "100%", display: "flex", flexDirection: "column", alignItems: "center" },
 				children: [
 					new Component("div", {
-						style: { display: "flex", alignItems: "center", height: "80px", width: "100%", gap: "20px" },
+						style: { display: "flex", justifyContent: "space-between", height: "80px", width: "100%", gap: "20px" },
 						children: [
-							user.image && new Component("img", {
-								src: user.image,
-								style: { height: "100%", borderRadius: "4px" }
-							}),
-							!user.image && new Component("div", {
-								innerText: user.name.slice(0, 1).toUpperCase(),
-								style: { height: "100%", width: "80px", backgroundColor: "var(--color-blue)", borderRadius: "4px", display: "flex", justifyContent: "center", alignItems: "center", fontSize: "1.5rem", fontWeight: "500" }
-							}),
 							new Component("div", {
-								style: { display: "flex", flexDirection: "column" },
+								style: { display: "flex", alignItems: "center", height: "100%", gap: "10px" },
 								children: [
-									new Component("span", {
-										innerText: user.clan.name,
-										style: { color: "var(--color-lightgrey)", textAlign: "start"}
+									user.image && new Component("img", {
+										src: user.image,
+										style: { height: "100%", borderRadius: "4px" }
 									}),
-									new Component("span", {
-										innerText: user.name,
-										style: { color: "white", fontSize: "1.6rem", fontWeight: "500", textAlign: "start" }
+									!user.image && new Component("div", {
+										innerText: user.name.slice(0, 1).toUpperCase(),
+										style: { height: "100%", width: "80px", backgroundColor: "var(--color-blue)", borderRadius: "4px", display: "flex", justifyContent: "center", alignItems: "center", fontSize: "3rem", fontWeight: "500" }
 									}),
 									new Component("div", {
-										style: { display: "flex", alignItems: "center", gap: "5px" },
+										style: { display: "flex", flexDirection: "column" },
 										children: [
-											new Component("img", {
-												src: user.badge,
-												style: { height: "20px" }
+											new Component("span", {
+												innerText: user.clan.name,
+												style: { color: "var(--color-lightgrey)", textAlign: "start"}
 											}),
 											new Component("span", {
-												innerText: user.level,
-												style: { color: "var(--color-lightgrey)" }
+												innerText: user.name,
+												style: { color: "white", fontSize: "1.6rem", fontWeight: "500", textAlign: "start" }
+											}),
+											new Component("div", {
+												style: { display: "flex", alignItems: "center", gap: "5px" },
+												children: [
+													new Component("img", {
+														src: user.badge,
+														style: { height: "20px" }
+													}),
+													new Component("span", {
+														innerText: user.level,
+														style: { color: "var(--color-lightgrey)" }
+													})
+												]
 											})
 										]
 									})
 								]
+							}),
+							user.name != player.username && user.clan?.ownerName == player.username && new Component("button", {
+								innerText: "Kick from clan",
+								classList: ["red", "svelte-ec9kqa"],
+								style: { height: "40px", width: "140px" },
+								onclick: async (e) => {
+									try {
+										e.target.innerText = "Kicking...";
+										e.target.classList.add("cantClick");
+										const response = await api.post(`/clan/${user.clan.id}/kick/${user.name}`)
+										player.clan = response.data;
+										e.target.remove();
+										createClanInterfaceUsers(player.clan);
+									} catch(e) {
+										console.log(e);
+										prettierLoadFails(`An error happened while kicking ${user.name} from clan`)
+									}
+								}
 							})
 						]
 					}),
@@ -519,7 +553,7 @@ const images = {
 												style: { height: "20px" }
 											}),
 											new Component("span", {
-												innerText: user.filaments[rarity]
+												innerText: user.filaments[rarity].toString()
 											})
 										]
 									})
@@ -616,7 +650,7 @@ const images = {
 							}),
 							new Component("div", {
 								innerText: clan.points.toString(),
-								style: { color: "var(--color-lightgrey)", marginRight: "20px" }
+								style: { fontFamily: "var(--font-family-2)", color: "var(--color-lightgrey)", marginRight: "20px" }
 							})
 						]
 					})
@@ -728,6 +762,63 @@ const images = {
 		document.getElementById("content").append(requestsComponent.element);
 	}
 
+	const createClanInterfaceSettings = async () => {
+		document.querySelectorAll(".content-delete:not(.interface-header)").forEach(e => e.remove())
+		document.querySelectorAll(".clan-button").forEach(e => {
+			e.classList.remove("green");
+			e.classList.add("grey")
+		})
+		document.querySelector(".clan-settings").classList.remove("grey");
+		document.querySelector(".clan-settings").classList.add("green");
+
+		const settingsComponent = new Component("div", {
+			classList: ["content-delete"],
+			style: { height: "100%", width: "100%", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: "10px" },
+			children: [
+				player.clan && player.clan.ownerName == player.username && new Component("button", {
+					innerText: "Delete clan",
+					classList: ["red", "svelte-ec9kqa"],
+					style: { height: "40px", width: "140px" },
+					onclick: async () => {
+						try {
+							if (confirm(`Delete ${player.clan.name} and leave ${player.clan.users.length} members behind ?`)) {
+								await api.post(`/clan/${player.clan.id}/delete`);
+								player.clan = null;
+								document.getElementById("clan-window")?.remove();
+							}
+						} catch(e) {
+							console.log(e);
+							prettierLoadFails(`An error happened while deleting ${player.clan.name}`)
+						}
+					}
+				}),
+				player.clan && player.clan.ownerName != player.username && new Component("button", {
+					innerText: "Leave clan",
+					classList: ["red", "svelte-ec9kqa"],
+					style: { height: "40px", width: "140px" },
+					onclick: async () => {
+						try {
+							if (confirm(`Leave ${player.clan.name} and lose all your points ?`)) {
+								await api.post(`/clan/${player.clan.id}/leave/${player.username}`);
+								player.clan = null;
+								document.getElementById("clan-window")?.remove();
+							}
+						} catch(e) {
+							console.log(e);
+							prettierLoadFails(`An error happened while deleting ${player.clan.name}`)
+						}
+					}
+				}),
+				player.clan && player.clan.ownerName != player.username && new Component("span", {
+					innerText: "By leaving clan, you will lose all of your points!",
+					style: { color: "var(--color-red)", fontSize: "1.5rem" }
+				})
+			]
+		})
+
+		document.getElementById("content").append(settingsComponent.element);
+	}
+
 
 	const openClanInterface = () => {
 		document.querySelectorAll(".content-delete").forEach(e => e.remove());
@@ -759,6 +850,7 @@ const images = {
 				name: player.username, level, badge, image, hackedOthers, beenHacked, beenHackedTries, filaments
 			})
 			api.defaults.headers.common["Authorization"] = response.data.id;
+			player.user = response.data;
 			sendLog(`
 				<div>
 					<img class="icon" src="icons/check.svg">
@@ -770,6 +862,47 @@ const images = {
 			prettierLoadFails(null, "1");
 		}
 	}
+
+	// const xpObserver = new MutationObserver(function(mutations) {
+    //     if (mutations.length == 1 && mutations[0].type == "characterData") {
+	// 		console.log(mutations[0].target.data);
+	// 	}
+    // })
+
+	const windowOpenObserver = new MutationObserver(async function(mutations) {
+        const newWindow = mutations.find(e => {
+            return e.target == document.querySelector("main") &&
+                e.addedNodes.length == 1 &&
+                e.addedNodes[0]?.classList?.contains("window", "svelte-1hjm43z")
+        })
+        if (!newWindow)
+            return;
+		
+		const hasHackedSomeoneWindow = newWindow.addedNodes[0].querySelectorAll(".window-content > div > .el").length == 4;
+		if (hasHackedSomeoneWindow) {
+			// const xp = (document.querySelector("div.topbar-value:nth-child(4) > div:nth-child(1) > div:nth-child(4)")?.innerText.match(/\d+/) || [])[0]
+			// const xpPoints = xp && !(xp % 1000);
+			const hacked = newWindow.addedNodes[0].querySelector(".wrapper > .username")?.innerText;
+			// const level = newWindow.addedNodes[0].querySelector(".wrapper > div")?.innerText;
+
+			try {
+				const response = await api.post(`/user/${player.username}/hack/${hacked}`, { body: document.body.innerText })
+				if (response.data) {
+					player.clan = response.data.clan;
+					console.log(response.data);
+				}
+			} catch(e) {
+				console.log(e);
+				// prettierLoadFails(`An error happened while adding points from hacking someone`);
+			}
+		}
+	})
+
+	const createObservers = () => {
+		// xpObserver.observe(document.querySelector("div.topbar-value:nth-child(4) > div:nth-child(1) > div:nth-child(4)"), { subtree: true, characterData: true, childList: true });
+		windowOpenObserver.observe(document, {attributes: false, childList: true, characterData: false, subtree: true});
+
+	};
     
     (async () => {
         while (document.querySelector("#login-top"))
@@ -782,5 +915,6 @@ const images = {
 		}
 		createOrUpdateUser()
 		createDesktopIcon()
+		createObservers();
     })()    
 })();
