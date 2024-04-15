@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         clans-on-s0urce
 // @namespace    http://tampermonkey.net/
-// @version      2024-04-13 - 3
+// @version      2024-04-15
 // @description  Create or join a clan on s0urce.io!
 // @author       Xen0o2
 // @match        https://s0urce.io/
