@@ -66,7 +66,8 @@ const images = {
 	'use strict';
 	
 	const player = {
-		username: document.querySelector("img[src='icons/online.svg']")?.parentNode?.innerText?.trim(),
+		id: null,
+		name: document.querySelector("img[src='icons/online.svg']")?.parentNode?.innerText?.trim(),
 		clan: null,
 		user: null
 	};
@@ -159,7 +160,7 @@ const images = {
 	const openClanWindow = async () => {
 		if (document.getElementById("clan-window")) return;
 		
-		const response = await api.get(`/user/getByUsername/${player.username}`);
+		const response = await api.get(`/user/getByUsername/${player.name}`);
 		if (!response)
 			return;
 
@@ -233,7 +234,7 @@ const images = {
 		document.querySelectorAll(".content-delete").forEach(e => e.remove());
 
 		try {
-			const response = await api.get(`clan/requestable/${player.username}`);
+			const response = await api.get(`clan/requestable/${player.name}`);
 	
 			const clanList = new Component("div", {
 				classList: ["content-delete"],
@@ -279,7 +280,7 @@ const images = {
 									try {
 										e.target.innerText = "Sent";
 										e.target.classList.add("cantClick");
-										await api.post(`/clan/${clan.id}/request/${player.username}`);
+										await api.post(`/clan/${clan.id}/request/${player.name}`);
 										e.target.onclick = null;
 									} catch(e) {
 										console.log(e);
@@ -334,7 +335,7 @@ const images = {
 		try {
 			const response = await api.post(`/clan/create`, {
 				name: clanName,
-				ownerName: player.username
+				ownerName: player.name
 			})
 			if (response.data) {
 				player.clan = response.data;
@@ -371,7 +372,7 @@ const images = {
 					classList: ["grey", "svelte-ec9kqa", "clan-button", "clan-leaderboard"],
 					onclick: createClanInterfaceLeaderboard
 				}),
-				player.clan.ownerName == player.username && player.clan.joinRequests.length > 0 ? new Component("button", {
+				player.clan.ownerName == player.name && player.clan.joinRequests.length > 0 ? new Component("button", {
 					innerText: "Requests",
 					classList: ["grey", "svelte-ec9kqa", "clan-button", "clan-requests"],
 					onclick: createClanInterfaceRequests
@@ -514,7 +515,7 @@ const images = {
 									})
 								]
 							}),
-							user.name != player.username && user.clan?.ownerName == player.username && new Component("button", {
+							user.name != player.name && user.clan?.ownerName == player.name && new Component("button", {
 								innerText: "Kick from clan",
 								classList: ["red", "svelte-ec9kqa"],
 								style: { height: "40px", width: "140px" },
@@ -770,7 +771,7 @@ const images = {
 			classList: ["content-delete"],
 			style: { height: "100%", width: "100%", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: "10px" },
 			children: [
-				player.clan && player.clan.ownerName == player.username && new Component("button", {
+				player.clan && player.clan.ownerName == player.name && new Component("button", {
 					innerText: "Delete clan",
 					classList: ["red", "svelte-ec9kqa"],
 					style: { height: "40px", width: "140px" },
@@ -787,14 +788,14 @@ const images = {
 						}
 					}
 				}),
-				player.clan && player.clan.ownerName != player.username && new Component("button", {
+				player.clan && player.clan.ownerName != player.name && new Component("button", {
 					innerText: "Leave clan",
 					classList: ["red", "svelte-ec9kqa"],
 					style: { height: "40px", width: "140px" },
 					onclick: async () => {
 						try {
 							if (confirm(`Leave ${player.clan.name} and lose all your points ?`)) {
-								await api.post(`/clan/${player.clan.id}/leave/${player.username}`);
+								await api.post(`/clan/${player.clan.id}/leave/${player.name}`);
 								player.clan = null;
 								document.getElementById("clan-window")?.remove();
 							}
@@ -804,7 +805,7 @@ const images = {
 						}
 					}
 				}),
-				player.clan && player.clan.ownerName != player.username && new Component("span", {
+				player.clan && player.clan.ownerName != player.name && new Component("span", {
 					innerText: "By leaving clan, you will lose all of your points!",
 					style: { color: "var(--color-red)", fontSize: "1.5rem" }
 				})
@@ -820,42 +821,6 @@ const images = {
 
 		createClanInterfaceHeader();
 		createClanInterfaceUsers(player.clan);
-	}
-
-	const createOrUpdateUser = async () => {
-		try {
-			const computerButton = document.querySelector("#desktop-container > div > div > div > img[src='icons/computer.svg']")?.parentNode?.parentNode?.parentNode;
-			computerButton?.click();
-			await sleep(300);
-
-			const level = parseInt(document.body.innerText.match(/Level \w+/g)[0].trim().slice(6));
-			const badge = document.querySelector("img.icon[alt='Rank']")?.src;
-			const image = document.querySelector(".item > img")?.src;
-
-			document.querySelector("img[src='icons/stats.svg']")?.click();
-			await sleep(300);
-
-			const hackedOthers = parseInt(document.body.innerText.match(/Hacked others\t\d+/g)[0]?.match(/\d+/g)[0]);
-			const beenHacked = parseInt(document.body.innerText.match(/Been hacked\t\d+/g)[0]?.match(/\d+/g)[0])
-			const beenHackedTries = document.body.innerText.match(/Attacks on Port \d+\t\d+/g).map(e => parseInt(e.match(/\d+/g)[1])).reduce((a,b) => a + b, 0)
-			const filaments = Array.from(document.querySelectorAll(".filament-el")).map(e => e.innerText)
-
-			document.querySelector(".window-title > img[src='icons/computer.svg']")?.parentNode?.querySelector("button")?.click();
-			const response = await api.post("/user/createOrUpdate", {
-				name: player.username, level, badge, image, hackedOthers, beenHacked, beenHackedTries, filaments
-			})
-			api.defaults.headers.common["Authorization"] = response.data.id;
-			player.user = response.data;
-			sendLog(`
-				<div>
-					<img class="icon" src="icons/check.svg">
-					Clans successfully loaded!
-				</div>
-			`)
-		} catch(e) {
-			console.log(e);
-			prettierLoadFails(null, "1");
-		}
 	}
 
 	const logObserver = new MutationObserver(function(mutations) {
@@ -879,7 +844,7 @@ const images = {
 					if (users.length == 0 || !level)
 						return;
 					try {
-						const response = await api.post(`/user/${player.username}/hacked/${hacker}`, { level })
+						const response = await api.post(`/user/${player.name}/hacked/${hacker}`, { level })
 						if (response.data)
 							player.clan = response.data;
 					} catch(e) {
@@ -901,13 +866,13 @@ const images = {
 
 		const isLogWindow = newWindow.addedNodes[0].querySelector(".window-title > img[src='icons/log.svg']")
         if (isLogWindow)
-            logObserver.observe(isLogWindow?.closest(".window.svelte-1hjm43z")?.querySelector(".window-content > #wrapper"), {attributes: false, childList: true, characterData: false, subtree: true});
+            logObserver.observe(isLogWindow?.closest(".window.svelte-1hjm43z")?.querySelector(".window-content > #wrapper"), {attributes: false, childList: true, characterData: true, subtree: true});
 		
 		const hasHackedSomeoneWindow = newWindow.addedNodes[0].querySelectorAll(".window-content > div > .el").length == 4;
 		if (hasHackedSomeoneWindow) {
 			try {
 				const hacked = newWindow.addedNodes[0].querySelector(".wrapper > .username")?.innerText;
-				const response = await api.post(`/user/${player.username}/hack/${hacked}`, { body: document.body.innerText })
+				const response = await api.post(`/user/${player.name}/hack/${hacked}`, { body: document.body.innerText })
 				if (response.data)
 					player.clan = response.data.clan, console.log(response.data);
 			} catch(e) {
@@ -931,23 +896,99 @@ const images = {
 	})
 
 	const createObservers = () => {
-		const logWindow = document.querySelector(".window-title > img[src='icons/log.svg']").closest(".window.svelte-1hjm43z").querySelector(".window-content > #wrapper");
-		logObserver.observe(logWindow, {attributes: false, childList: true, characterData: false, subtree: true});
-		windowOpenObserver.observe(document, {attributes: false, childList: true, characterData: false, subtree: true});
-		windowCloseObserver.observe(document, {attributes: false, childList: true, characterData: false, subtree: true});
+		return new Promise(resolve => {
+			const logWindow = document.querySelector(".window-title > img[src='icons/log.svg']").closest(".window.svelte-1hjm43z").querySelector(".window-content > #wrapper");
+			logObserver.observe(logWindow, {attributes: false, childList: true, characterData: false, subtree: true});
+			windowOpenObserver.observe(document, {attributes: false, childList: true, characterData: false, subtree: true});
+			windowCloseObserver.observe(document, {attributes: false, childList: true, characterData: false, subtree: true});
+			resolve();
+		})
 	};
+
+	const createLoginDisplay = () => {
+		const display = new Component("div", {
+			id: "display-delete",
+			style: { position: "absolute", zIndex: "100", top: "0", height: "100vh", width: "100vw", backgroundColor: "black", opacity: "0.8", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" },
+			children: [
+				new Component("span", {
+					innerText: "Logging to clans ...",
+					style: { color: "white", fontFamily: "var(--font-family-2)", fontWeight: "500", fontSize: "3rem", opacity: "1" }
+				})
+			]
+		})
+
+		document.querySelector("html").append(display.element);
+	}
+
+	const loginUser = async () => {
+		try {
+
+			document.querySelector("#desktop-container > div > div > div > img[src='icons/computer.svg']")?.parentNode?.parentNode?.parentNode?.click();
+			await sleep(300);
+
+			const id = document.querySelector("#top-wrapper > div:nth-child(1) > div:nth-child(2) > div:nth-child(3)")?.innerText.slice(4);
+			const name = document.querySelector("img[src='icons/online.svg']")?.parentNode?.innerText?.trim();
+			if (!id)
+				return prettierLoadFails(`An error happened while fetching user's information!`);
+			player.id = id;
+			player.name = name;
+
+			const level = parseInt(document.body.innerText.match(/Level \w+/g)[0].trim().slice(6));
+			const badge = document.querySelector("img.icon[alt='Rank']")?.src;
+			const image = document.querySelector(".item > img")?.src;
+
+			await sleep(200);
+			document.querySelector("img[src='icons/stats.svg']")?.click();
+			await sleep(300);
+
+			const hackedOthers = parseInt(document.body.innerText.match(/Hacked others\t\d+/g)[0]?.match(/\d+/g)[0]);
+			const beenHacked = parseInt(document.body.innerText.match(/Been hacked\t\d+/g)[0]?.match(/\d+/g)[0])
+			const beenHackedTries = document.body.innerText.match(/Attacks on Port \d+\t\d+/g).map(e => parseInt(e.match(/\d+/g)[1])).reduce((a,b) => a + b, 0)
+			const filaments = Array.from(document.querySelectorAll(".filament-el")).map(e => e.innerText)
+
+			document.querySelector(".window-title > img[src='icons/computer.svg']")?.parentNode?.querySelector("button")?.click();
+			
+			await api.post(`/user/${player.name}/connect`, { id: player.id });
+			await sleep(200);
+			document.querySelector("#desktop-container > div > div > div > img[src='icons/friends.svg']")?.parentNode?.parentNode?.parentNode?.click();
+			await sleep(200);
+			Array.from(document.querySelectorAll(".chat-el > .chat-name > .unread")).map(e => e.parentNode).find(e => e.innerText.slice(0, -2) == "Bert")?.click()
+			await sleep(200);
+			const code = ((document.querySelector(".message.svelte-wdw3y7")?.innerText.match(/{.+}/g) || [])[0])?.slice(1, -1);
+			
+			const response = await api.post(`/user/${player.name}/connect/${code}`, { 
+				id: player.id, level, badge, image, hackedOthers, beenHacked, beenHackedTries, filaments
+			});
+			api.defaults.headers.common["Authorization"] = response.data.id;
+			player.clan = response.data.clan;
+			document.querySelector(".window-title > img[src='icons/friends.svg']")?.parentNode?.querySelector("button")?.click();
+			document.getElementById("display-delete")?.remove();
+			sendLog(`
+				<div>
+					<img class="icon" src="icons/check.svg">
+					Clans successfully loaded!
+				</div>
+			`)
+		} catch(e) {
+			console.log(e);
+			prettierLoadFails(`An error happened while trying to login`);
+		}
+	}
     
     (async () => {
         while (document.querySelector("#login-top"))
-            await sleep(1000);
-		if (!player.username) {
+            await sleep(500);
+		createLoginDisplay();
+		await sleep(200);
+		await loginUser();
+
+		await createObservers();
+		if (!player.name) {
             await sleep(300);
-			player.username = document.querySelector("img[src='icons/online.svg']")?.parentNode?.innerText?.trim();
-			if (!player.username)
+			player.name = document.querySelector("img[src='icons/online.svg']")?.parentNode?.innerText?.trim();
+			if (!player.name)
 				return prettierLoadFails(`You must have an account to use "clans-on-s0urce" addon!`)
 		}
-		createOrUpdateUser()
 		createDesktopIcon()
-		createObservers();
     })()    
 })();
